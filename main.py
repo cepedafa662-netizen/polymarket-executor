@@ -31,7 +31,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
     
     try:
         from py_clob_client.client import ClobClient
-        from py_clob_client.clob_types import OrderArgs, OrderType, PartialCreateOrderOptions
+        from py_clob_client.clob_types import OrderArgs, OrderType, PartialCreateOrderOptions, Side
         from py_clob_client.constants import POLYGON
         
         # Inicializar cliente
@@ -75,6 +75,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
                 token_id=token_id,
                 price=order.price,
                 size=order.size_usdc,
+                side=Side.BUY,
             ),
             options=PartialCreateOrderOptions(tick_size="0.01")
         )
