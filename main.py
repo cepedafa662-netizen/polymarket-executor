@@ -28,23 +28,27 @@ async def test_polymarket():
 async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
     if x_secret != API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     try:
-        from py_clob_client.client import ClobClient
-        from py_clob_client.clob_types import OrderArgs, PartialCreateOrderOptions
-        
+        from py_clob_client_v2 import ClobClient, OrderArgs, OrderType, PartialCreateOrderOptions, Side
+
+        # Paso 1 — obtener credenciales L2
+        client_l1 = ClobClient(
+            host=CLOB_HOST,
+            chain_id=order.chain_id,
+            key=order.private_key,
+        )
+        creds = client_l1.create_or_derive_api_key()
+
+        # Paso 2 — cliente autenticado L1+L2
         client = ClobClient(
             host=CLOB_HOST,
             chain_id=order.chain_id,
             key=order.private_key,
-            signature_type=2,
-            funder=os.environ.get("POLY_FUNDER_ADDRESS")
+            creds=creds,
         )
-        
-        creds = client.create_or_derive_api_creds()
-        client.set_api_creds(creds)
-        
-        # Obtener token_id NO
+
+        # Resolver token_id NO
         if order.market_id.startswith("0x"):
             async with httpx.AsyncClient() as http:
                 r = await http.get(f"{CLOB_HOST}/markets/{order.market_id}", timeout=10)
@@ -63,23 +67,25 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
                     raise HTTPException(status_code=422, detail="No token_id found")
         else:
             token_id = order.market_id
-        
-        # Ejecutar orden — BUY el lado NO
-        result = client.create_and_post_order(
-            OrderArgs(
+
+        # Ejecutar orden
+        resp = client.create_and_post_order(
+            order_args=OrderArgs(
                 token_id=token_id,
                 price=order.price,
                 size=order.size_usdc,
-                side="BUY",
-            )
+                side=Side.BUY,
+            ),
+            options=PartialCreateOrderOptions(tick_size="0.01"),
+            order_type=OrderType.GTC,
         )
-        
+
         return {
             "success": True,
-            "order_id": result.get("orderID", ""),
-            "status": result.get("status", ""),
-            "token_id": token_id
+            "order_id": resp.get("orderID", ""),
+            "status": resp.get("status", ""),
+            "token_id": token_id,
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
