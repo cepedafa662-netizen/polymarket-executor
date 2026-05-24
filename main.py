@@ -50,7 +50,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
         )
         
         # Derivar API credentials
-        creds = client.create_or_derive_api_key()
+        creds = client.derive_api_key()
         client.set_api_creds(creds)
         
         # Obtener token_id NO desde CLOB
