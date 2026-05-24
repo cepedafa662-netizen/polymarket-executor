@@ -1,5 +1,4 @@
 fastapi
 uvicorn
 httpx
-cryptography
-py-clob-client==0.34.6
+py-clob-client-v2==1.0.1
