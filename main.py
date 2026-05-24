@@ -70,6 +70,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
                 token_id=token_id,
                 price=order.price,
                 size=order.size_usdc,
+                side="BUY",
             )
         )
         
