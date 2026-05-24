@@ -37,11 +37,11 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
             host=CLOB_HOST,
             chain_id=order.chain_id,
             key=order.private_key,
-            signature_type=3,
+            signature_type=2,
             funder=os.environ.get("POLY_FUNDER_ADDRESS")
         )
         
-        creds = client.derive_api_key()
+        creds = client.create_or_derive_api_creds()
         client.set_api_creds(creds)
         
         # Obtener token_id NO
