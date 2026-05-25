@@ -30,14 +30,14 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         from py_clob_client_v2 import ClobClient, OrderArgs, OrderType, PartialCreateOrderOptions, Side
-        client_l1 = ClobClient(
-            host=CLOB_HOST,
-            chain_id=order.chain_id,
-            key=order.private_key,
-            signature_type=3,
-            funder=os.environ.get("POLY_FUNDER_ADDRESS"),
+        from py_clob_client_v2.clob_types import ApiCreds
+
+        creds = ApiCreds(
+            api_key=os.environ["CLOB_API_KEY"],
+            api_secret=os.environ["CLOB_SECRET"],
+            api_passphrase=os.environ["CLOB_PASS_PHRASE"],
         )
-        creds = client_l1.create_or_derive_api_key()
+
         client = ClobClient(
             host=CLOB_HOST,
             chain_id=order.chain_id,
@@ -46,6 +46,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
             signature_type=3,
             funder=os.environ.get("POLY_FUNDER_ADDRESS"),
         )
+
         if order.market_id.startswith("0x"):
             async with httpx.AsyncClient() as http:
                 r = await http.get(f"{CLOB_HOST}/markets/{order.market_id}", timeout=10)
@@ -64,6 +65,7 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
                     raise HTTPException(status_code=422, detail="No token_id found")
         else:
             token_id = order.market_id
+
         resp = client.create_and_post_order(
             order_args=OrderArgs(
                 token_id=token_id,
@@ -79,28 +81,6 @@ async def execute_order(order: OrderRequest, x_secret: str = Header(None)):
             "order_id": resp.get("orderID", ""),
             "status": resp.get("status", ""),
             "token_id": token_id,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/derive-creds")
-async def derive_creds(x_secret: str = Header(None)):
-    if x_secret != API_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        from py_clob_client_v2 import ClobClient
-        c = ClobClient(
-            host=CLOB_HOST,
-            chain_id=137,
-            key=os.environ["POLY_PRIVATE_KEY"],
-            signature_type=3,
-            funder=os.environ["POLY_FUNDER_ADDRESS"],
-        )
-        creds = c.create_or_derive_api_key()
-        return {
-            "api_key": creds.api_key,
-            "secret": creds.api_secret,
-            "passphrase": creds.api_passphrase
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
